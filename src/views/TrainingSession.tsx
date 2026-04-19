@@ -163,7 +163,7 @@ function ExerciseCard({ ex, exIdx, state, onAddSet, onToggleSet, onUpdateSet, is
                 {isSetPR && set.completed && <Trophy size={10} className="text-yellow-400" />}
               </div>
               
-              <div className="space-y-1">
+              <div className="min-w-0 flex-1">
                 <input 
                   type="number"
                   value={set.weight || ''}
@@ -171,18 +171,23 @@ function ExerciseCard({ ex, exIdx, state, onAddSet, onToggleSet, onUpdateSet, is
                   onChange={(e) => onUpdateSet(sIdx, 'weight', parseFloat(e.target.value) || 0)}
                   className="w-full bg-slate-800 text-center rounded-lg py-2 outline-none font-bold text-slate-100 placeholder:text-slate-600 focus:ring-1 ring-brand-blue/30"
                 />
-                {set.weight > 0 && set.reps > 0 && (
-                  <p className="text-[8px] text-center text-slate-500 font-bold">1RM: {currentE1RM.toFixed(0)}</p>
-                )}
+                <div className="h-3 flex items-center justify-center">
+                  {set.weight > 0 && set.reps > 0 && (
+                    <p className="text-[8px] text-slate-500 font-bold">1RM: {currentE1RM.toFixed(0)}</p>
+                  )}
+                </div>
               </div>
 
-              <input 
-                type="number"
-                value={set.reps || ''}
-                placeholder="0"
-                onChange={(e) => onUpdateSet(sIdx, 'reps', parseInt(e.target.value) || 0)}
-                className="bg-slate-800 text-center rounded-lg py-2 outline-none font-bold text-slate-100 placeholder:text-slate-600 focus:ring-1 ring-brand-blue/30"
-              />
+              <div className="min-w-0 flex-1">
+                <input 
+                  type="number"
+                  value={set.reps || ''}
+                  placeholder="0"
+                  onChange={(e) => onUpdateSet(sIdx, 'reps', parseInt(e.target.value) || 0)}
+                  className="w-full bg-slate-800 text-center rounded-lg py-2 outline-none font-bold text-slate-100 placeholder:text-slate-600 focus:ring-1 ring-brand-blue/30"
+                />
+                <div className="h-3" /> {/* Spacer to align with KG column */}
+              </div>
 
               <input 
                 type="number"
