@@ -27,6 +27,7 @@ interface TrainingSessionProps {
 export default function TrainingSession({ session, onFinish, onCancel, state }: TrainingSessionProps) {
   const [currentSession, setCurrentSession] = useState<Session>(session);
   const [activeExIdx, setActiveExIdx] = useState(0);
+  const [timerStart, setTimerStart] = useState<number | null>(null);
 
   const addExercise = (exId: string) => {
     const newEx: WorkoutExercise = {
@@ -54,8 +55,15 @@ export default function TrainingSession({ session, onFinish, onCancel, state }: 
 
   const toggleSet = (exIdx: number, setIdx: number) => {
     const newExs = [...currentSession.exercises];
-    newExs[exIdx].sets[setIdx].completed = !newExs[exIdx].sets[setIdx].completed;
+    const isNowCompleted = !newExs[exIdx].sets[setIdx].completed;
+    newExs[exIdx].sets[setIdx].completed = isNowCompleted;
     setCurrentSession(prev => ({ ...prev, exercises: newExs }));
+    
+    if (isNowCompleted) {
+      setTimerStart(Date.now());
+    } else {
+      setTimerStart(null);
+    }
   };
 
   const updateSet = (exIdx: number, setIdx: number, field: keyof Set, val: any) => {
@@ -77,7 +85,7 @@ export default function TrainingSession({ session, onFinish, onCancel, state }: 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       {/* Header */}
       <div className="flex justify-between items-start sticky top-0 bg-slate-900/80 backdrop-blur-md pt-2 pb-4 z-40">
         <div>
@@ -88,6 +96,9 @@ export default function TrainingSession({ session, onFinish, onCancel, state }: 
           <X size={20} />
         </button>
       </div>
+
+      {/* Timer Overlay */}
+      <RestTimer startTime={timerStart} onClear={() => setTimerStart(null)} />
 
       {/* Exercises List */}
       <div className="space-y-8">
@@ -119,6 +130,96 @@ export default function TrainingSession({ session, onFinish, onCancel, state }: 
     </div>
   );
 }
+
+function RestTimer({ startTime, onClear }: { startTime: number | null, onClear: () => void }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  // Simple beep function using Web Audio API
+  const playBeep = (freq = 440, duration = 0.1) => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.frequency.value = freq;
+      oscillator.type = 'sine';
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + duration);
+    } catch (e) {
+      console.warn('Audio context failed', e);
+    }
+  };
+
+  useEffect(() => {
+    if (!startTime) {
+      setElapsed(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const newElapsed = Math.floor((Date.now() - startTime) / 1000);
+      setElapsed(newElapsed);
+
+      // Beep every 60 seconds of rest
+      if (newElapsed > 0 && newElapsed % 60 === 0) {
+        playBeep(523, 0.2); // C5
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  if (!startTime) return null;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleClear = () => {
+    playBeep(880, 0.05); // High beep on clear
+    onClear();
+  };
+
+  return (
+    <motion.div 
+      initial={{ y: 50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 50, opacity: 0 }}
+      className="fixed bottom-24 left-4 right-4 z-50 pointer-events-none"
+    >
+      <div className="glass-dark border border-brand-blue/30 p-4 rounded-2xl flex items-center justify-between shadow-2xl shadow-brand-blue/20 pointer-events-auto">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-brand-blue/20 flex items-center justify-center text-brand-blue">
+             <motion.div
+               animate={{ scale: [1, 1.2, 1] }}
+               transition={{ duration: 1, repeat: Infinity }}
+             >
+              <Timer size={22} />
+             </motion.div>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Tiempo de Descanso</p>
+            <p className="text-xl font-mono font-bold text-slate-50">{formatTime(elapsed)}</p>
+          </div>
+        </div>
+        <button 
+          onClick={handleClear}
+          className="bg-white/5 hover:bg-white/10 p-2 rounded-xl text-slate-400 transition-colors border border-white/5"
+        >
+          <X size={20} />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+
 
 function ExerciseCard({ ex, exIdx, state, onAddSet, onToggleSet, onUpdateSet, isPR }: any) {
   const exerciseInfo = BASE_EXERCISES.find(e => e.id === ex.exerciseId);

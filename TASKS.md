@@ -7,10 +7,8 @@
 - [ ] **Optimización de Macros**: Refinar el plan nutricional permitiendo consultas dinámicas sobre alimentos y recetas.
 
 ## 📱 Interfaz y UX/UI
-- [ ] **Histórico Visual**: Añadir gráficos de progresión de 1RM por ejercicio principal (Bench Press, Squat, etc.).
-- [ ] **Temporizador de Descanso**: Añadir un cronómetro automático que se active al completar una serie.
-- [ ] **Modo Offline**: Asegurar que la aplicación sea una PWA (Progressive Web App) funcional sin conexión a internet.
-- [ ] **Sonidos y Notificaciones**: Avisos sonoros al terminar descansos o alcanzar nuevos PRs (Personal Records).
+- [ ] **Sonidos y Notificaciones**: Avisos sonoros al alcanzar nuevos PRs (Personal Records) o récords de volumen.
+
 
 ## 🛠️ Infraestructura y Despliegue
 - [ ] **Configuración de Secretos en GitHub**: Añadir `GEMINI_API_KEY` como secreto en el repositorio para que los despliegues de Pages puedan usarla en el futuro.
@@ -18,6 +16,13 @@
 
 ## ✅ Tareas Completadas
 - [x] Inicialización del entorno de desarrollo.
-- [x] Corrección de layout en inputs de KG y Repeticiones (evitando solapamiento).
-- [x] Configuración de despliegue automático a GitHub Pages mediante Actions.
-- [x] Soporte para rutas en producción (cambiado a `base: '/Aerogym/'`).
+- [x] Corrección de layout en inputs de KG y Repeticiones.
+- [x] Configuración de despliegue automático a GitHub Pages.
+- [x] Soporte para rutas en producción (`base: '/Aerogym/'`).
+- [x] **Temporizador de Descanso**: Implementado con avisos sonoros (Web Audio API) y animación de pulso.
+- [x] **Histórico Visual**: Gráficos de progresión de 1RM para ejercicios principales añadidos en Analytics.
+- [x] **SEO & Metadata**: Mejora de etiquetas meta, títulos y soporte básico para iconos iOS.
+- [x] **Modo Offline (PWA)**: Implementación completa con manifest, service worker e iconos generados.
+- [x] **Generación de Activos**: Iconos de 192px y 512px creados y configurados.
+
+
