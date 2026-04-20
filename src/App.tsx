@@ -11,7 +11,8 @@ import {
   RotateCcw,
   CheckCircle2,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Sparkles
 } from 'lucide-react';
 import { AppState, Session, Routine, UserProfile } from './types';
 import { loadState, saveState } from './lib/storage';
@@ -22,10 +23,11 @@ import TrainingSession from './views/TrainingSession';
 import Analytics from './views/Analytics';
 import ProfileSettings from './views/ProfileSettings';
 import OnboardingView from './views/OnboardingView';
+import CoachView from './views/CoachView';
 import { PREDEFINED_ROUTINES } from './constants/routines';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'workouts' | 'analytics' | 'profile' | 'onboarding'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'workouts' | 'analytics' | 'profile' | 'onboarding' | 'coach'>('home');
   const [state, setState] = useState<AppState>(loadState());
   const [activeSession, setActiveSession] = useState<Session | null>(null);
 
@@ -128,6 +130,7 @@ export default function App() {
       case 'home': return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} />;
       case 'workouts': return <RoutinesList state={state} updateState={updateState} onStartRoutine={startSession} />;
       case 'analytics': return <Analytics state={state} />;
+      case 'coach': return <CoachView state={state} />;
       case 'profile': return <ProfileSettings state={state} updateState={updateState} />;
       default: return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} />;
     }
@@ -155,6 +158,7 @@ export default function App() {
         <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-dark h-20 px-6 flex items-center justify-between z-50 rounded-t-3xl border-t border-white/5">
           <NavBtn icon={<LayoutDashboard size={24} />} active={activeTab === 'home'} onClick={() => setActiveTab('home')} label="Inicio" />
           <NavBtn icon={<Dumbbell size={24} />} active={activeTab === 'workouts'} onClick={() => setActiveTab('workouts')} label="Log" />
+          <NavBtn icon={<Sparkles size={24} />} active={activeTab === 'coach'} onClick={() => setActiveTab('coach')} label="Coach" />
           <NavBtn icon={<TrendingUp size={24} />} active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} label="Stats" />
           <NavBtn icon={<User size={24} />} active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} label="Perfil" />
         </nav>
@@ -165,9 +169,10 @@ export default function App() {
 
 function NavBtn({ icon, active, onClick, label }: { icon: React.ReactNode, active: boolean, onClick: () => void, label: string }) {
   return (
-    <button onClick={onClick} className={cn("nav-item", active && "nav-item-active")}>
+    <button onClick={onClick} className={cn("nav-item text-slate-500", active && "nav-item-active text-brand-blue")}>
       {icon}
-      <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
+      <span className="text-[9px] font-bold uppercase tracking-wider mt-1">{label}</span>
     </button>
   );
 }
+
