@@ -14,8 +14,9 @@ interface CoachViewProps {
   state: AppState;
 }
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const API_KEY = (import.meta.env.VITE_GEMINI_API_KEY || "").trim();
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
+
 
 
 export default function CoachView({ state }: CoachViewProps) {
@@ -33,6 +34,7 @@ export default function CoachView({ state }: CoachViewProps) {
   }, [messages, isTyping]);
 
   const generatePromptContext = () => {
+
     const { profile, sessions } = state;
     const lastSession = sessions[0];
     
@@ -59,37 +61,69 @@ export default function CoachView({ state }: CoachViewProps) {
     if (!input.trim() || isTyping || !genAI) return;
 
     const userMsg = input.trim();
+    if (!userMsg) return;
+
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    const newUserMsg: Message = { role: 'user', content: userMsg };
+    setMessages(prev => [...prev, newUserMsg]);
     setIsTyping(true);
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+      // Usamos el alias 'latest' para asegurar que usamos la versión más actual y disponible
+      const modelName = "gemini-flash-latest";
+      const model = genAI.getGenerativeModel({ model: modelName });
+
+      // Preparamos el historial: 
+      // 1. Saltamos el mensaje de bienvenida inicial (índice 0)
+      // 2. No incluimos el mensaje que acabamos de enviar (ya que se envía en sendMessage)
+      const chatHistory = messages.slice(1).map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        parts: [{ text: m.content }]
+      }));
+
+      // Iniciamos el chat
       const chat = model.startChat({
-        history: [
-          { role: "user", parts: [{ text: generatePromptContext() }] },
-          { role: "model", parts: [{ text: "Entendido. Soy Aero, estoy listo para guiarte." }] },
-          ...messages.map(m => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.content }]
-          }))
-        ]
+        history: chatHistory,
+        generationConfig: { 
+          maxOutputTokens: 500,
+          temperature: 0.7,
+        }
       });
 
-
-
-      const result = await chat.sendMessage(userMsg);
+      // Contexto del sistema inyectado
+      const systemContext = `[CONTEXTO: Usuario ${state.profile.name}, Nivel ${state.profile.level}, Objetivo ${state.profile.goal}]`;
+      const prompt = `${systemContext}\n\nPregunta del usuario: ${userMsg}`;
+      
+      const result = await chat.sendMessage(prompt);
       const response = await result.response;
       const text = response.text();
 
+      if (!text) throw new Error("Respuesta vacía de la IA");
+
       setMessages(prev => [...prev, { role: 'assistant', content: text }]);
-    } catch (error) {
-      console.error("Gemini Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Lo siento, mi conexión con los servidores de alto rendimiento se ha interrumpido. ¿Podemos intentarlo de nuevo?" }]);
+    } catch (error: any) {
+      console.error("Coach Debug - Detalle del error:", error);
+      
+      let errorMsg = "Parece que hay un problema técnico. Revisa tu conexión.";
+      
+      // Manejo de errores específicos para ayudar al usuario a diagnosticar
+      const errorStr = error.toString();
+      if (errorStr.includes("429") || errorStr.includes("quota") || errorStr.includes("limit")) {
+        errorMsg = "Error 429: Cuota excedida. Tu clave de API de Gemini ha alcanzado su límite o tiene una cuota de 0 para este modelo.";
+      } else if (errorStr.includes("404")) {
+        errorMsg = "Error 404: El modelo de IA no está disponible. Intentando ajustar automáticamente...";
+      } else if (errorStr.includes("API_KEY_INVALID") || errorStr.includes("not valid")) {
+        errorMsg = "La clave de API de Gemini no es válida. Revisa tu archivo .env.local.";
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
     } finally {
       setIsTyping(false);
     }
   };
+
+
+
 
   if (!API_KEY) {
     return (
@@ -116,6 +150,9 @@ export default function CoachView({ state }: CoachViewProps) {
         className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth"
       >
         {messages.map((msg, i) => (
+
+
+
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
