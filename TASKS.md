@@ -1,7 +1,7 @@
 # Próximas Tareas y Mejoras para AeroGym 🚀
 
 ## 🤖 Integración de IA (Gemini API)
-- [ ] **Entrenador Virtual (Chat)**: Implementar un asistente que responda dudas sobre técnica, ejercicios sustitutos y nutrición.
+- [x] **Entrenador Virtual (Chat)**: Implementar un asistente que responda dudas sobre técnica, ejercicios sustitutos y nutrición. (Implementado en CoachView)
 - [ ] **Generador de Rutinas Inteligente**: Crear una función que genere rutinas personalizadas basadas en el perfil del usuario (objetivo, nivel, equipo disponible) usando prompts de IA.
 - [ ] **Análisis de Progresión**: Analizar los datos de las sesiones para sugerir ajustes de peso y volumen (descargas, aumentos de intensidad).
 - [ ] **Optimización de Macros**: Refinar el plan nutricional permitiendo consultas dinámicas sobre alimentos y recetas.

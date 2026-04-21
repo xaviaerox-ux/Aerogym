@@ -25,6 +25,7 @@ import ProfileSettings from './views/ProfileSettings';
 import OnboardingView from './views/OnboardingView';
 import CoachView from './views/CoachView';
 import { PREDEFINED_ROUTINES } from './constants/routines';
+import { generateRoutineWithAI } from './lib/aiService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'workouts' | 'analytics' | 'profile' | 'onboarding' | 'coach'>('home');
@@ -113,6 +114,46 @@ export default function App() {
     return state.routines[nextIndex];
   }, [state.sessions, state.routines]);
 
+  const handleGenerateAIRoutine = async () => {
+    try {
+      const routine = await generateRoutineWithAI(state.profile);
+      updateState(prev => ({
+        ...prev,
+        routines: [routine, ...prev.routines]
+      }));
+      return routine;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  };
+
+  const handleImportHealth = (data: { sleep: any[], activity: any[] }) => {
+    updateState(prev => {
+      const metricsMap = new Map();
+      
+      // Existing metrics
+      prev.healthMetrics.forEach(m => metricsMap.set(m.date, m));
+
+      // Merge Activity
+      data.activity.forEach(a => {
+        const existing = metricsMap.get(a.date) || { date: a.date };
+        metricsMap.set(a.date, { ...existing, steps: a.steps });
+      });
+
+      // Merge Sleep
+      data.sleep.forEach(s => {
+        const existing = metricsMap.get(s.date) || { date: s.date };
+        metricsMap.set(s.date, { ...existing, sleep: s });
+      });
+
+      return {
+        ...prev,
+        healthMetrics: Array.from(metricsMap.values()).sort((a, b) => a.date.localeCompare(b.date))
+      };
+    });
+  };
+
   const renderContent = () => {
     if (activeSession) {
       return (
@@ -127,12 +168,19 @@ export default function App() {
 
     switch (activeTab) {
       case 'onboarding': return <OnboardingView state={state} updateState={updateState} onComplete={() => setActiveTab('home')} />;
-      case 'home': return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} />;
-      case 'workouts': return <RoutinesList state={state} updateState={updateState} onStartRoutine={startSession} />;
+      case 'home': return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} onImportHealth={handleImportHealth} />;
+      case 'workouts': return (
+        <RoutinesList 
+          state={state} 
+          updateState={updateState} 
+          onStartRoutine={startSession} 
+          onGenerateAI={handleGenerateAIRoutine}
+        />
+      );
       case 'analytics': return <Analytics state={state} />;
       case 'coach': return <CoachView state={state} />;
       case 'profile': return <ProfileSettings state={state} updateState={updateState} />;
-      default: return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} />;
+      default: return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} onImportHealth={handleImportHealth} />;
     }
   };
 

@@ -14,7 +14,8 @@ import {
 import { AppState } from '../types';
 import { format, subDays, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Dumbbell, TrendingUp, Calendar } from 'lucide-react';
+import { Dumbbell, TrendingUp, Calendar, Quote, Sparkles } from 'lucide-react';
+import { analyzeProgressionWithAI } from '../lib/aiService';
 
 interface AnalyticsProps {
   state: AppState;
@@ -84,14 +85,65 @@ export default function Analytics({ state }: AnalyticsProps) {
   };
 
   const mainExercises = [
-    { id: '1', name: 'Press de Banca' },
-    { id: '4', name: 'Sentadilla' },
-    { id: '7', name: 'Peso Muerto' }
+    { id: 'bench-press', name: 'Press de Banca' },
+    { id: 'squats', name: 'Sentadilla' },
+    { id: 'romanian-deadlift', name: 'Peso Muerto Rumano' }
   ];
+
+  const [coachAdvice, setCoachAdvice] = React.useState<string>("");
+  const [loadingAdvice, setLoadingAdvice] = React.useState(false);
+
+  React.useEffect(() => {
+    if (state.sessions.length > 0 && !coachAdvice) {
+      setLoadingAdvice(true);
+      analyzeProgressionWithAI(state.sessions, state.profile)
+        .then(setCoachAdvice)
+        .finally(() => setLoadingAdvice(false));
+    }
+  }, [state.sessions.length]);
 
   return (
     <div className="space-y-8 pb-32">
-      <h1 className="text-3xl font-bold">Estadísticas</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Estadísticas</h1>
+        {state.sessions.length > 0 && !coachAdvice && !loadingAdvice && (
+          <button 
+            onClick={() => {
+              setLoadingAdvice(true);
+              analyzeProgressionWithAI(state.sessions, state.profile)
+                .then(setCoachAdvice)
+                .finally(() => setLoadingAdvice(false));
+            }}
+            className="p-2 glass rounded-full text-brand-blue"
+          >
+            <Sparkles size={20} />
+          </button>
+        )}
+      </div>
+
+      {(coachAdvice || loadingAdvice) && (
+        <section className="animate-in fade-in slide-in-from-top-4 duration-700">
+           <div className="glass-dark border-brand-blue/20 p-5 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Quote size={40} className="text-brand-blue" />
+              </div>
+              <h3 className="text-xs font-bold text-brand-blue uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                <Sparkles size={14} />
+                Sabiduría de Aero
+              </h3>
+              {loadingAdvice ? (
+                <div className="flex gap-2 items-center text-slate-500 text-sm italic">
+                  <span className="w-2 h-2 bg-brand-blue rounded-full animate-pulse" />
+                  Aero está meditando sobre tus progresos...
+                </div>
+              ) : (
+                <p className="text-slate-200 leading-relaxed italic font-serif text-lg">
+                  "{coachAdvice}"
+                </p>
+              )}
+           </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">

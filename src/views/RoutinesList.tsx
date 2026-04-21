@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Play, Plus, Trash2, List, ShieldCheck } from 'lucide-react';
+import { Play, Plus, Trash2, List, ShieldCheck, Sparkles, Loader2 } from 'lucide-react';
 import { AppState, Routine } from '../types';
 import { cn } from '../lib/utils';
 import { BASE_EXERCISES } from '../constants/exercises';
@@ -10,10 +10,23 @@ interface RoutinesListProps {
   state: AppState;
   updateState: (updater: (prev: AppState) => AppState) => void;
   onStartRoutine: (routine: Routine) => void;
+  onGenerateAI: () => Promise<Routine>;
 }
 
-export default function RoutinesList({ state, updateState, onStartRoutine }: RoutinesListProps) {
+export default function RoutinesList({ state, updateState, onStartRoutine, onGenerateAI }: RoutinesListProps) {
   const [isAdding, setIsAdding] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateAI = async () => {
+    setIsGenerating(true);
+    try {
+      await onGenerateAI();
+    } catch (err) {
+      alert("Error al generar la rutina. Verifica tu conexión e IA Key.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const deleteRoutine = (id: string) => {
     updateState(prev => ({
@@ -26,12 +39,25 @@ export default function RoutinesList({ state, updateState, onStartRoutine }: Rou
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Rutinas</h1>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleGenerateAI}
+            disabled={isGenerating}
+            className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+              isGenerating ? "bg-slate-800 text-slate-500" : "bg-brand-blue/20 text-brand-blue border border-brand-blue/30 hover:bg-brand-blue hover:text-slate-950"
+            )}
+            title="Generar con IA"
+          >
+            {isGenerating ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
+          </button>
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-slate-950 hover:bg-brand-blue/80 transition-colors"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">

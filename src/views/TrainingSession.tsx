@@ -10,7 +10,8 @@ import {
   ChevronUp,
   ChevronRight,
   Dumbbell,
-  Trophy
+  Trophy,
+  Sparkles
 } from 'lucide-react';
 import { Session, AppState, Set, WorkoutExercise } from '../types';
 import { cn } from '../lib/utils';
@@ -23,6 +24,23 @@ interface TrainingSessionProps {
   onCancel: () => void;
   state: AppState;
 }
+
+const playBeep = (freq: number, duration: number) => {
+  try {
+    const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+    osc.connect(gain);
+    gain.connect(context.destination);
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.1, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + duration);
+    osc.start();
+    osc.stop(context.currentTime + duration);
+  } catch (e) {
+    console.warn("Audio Context blocked or unsupported");
+  }
+};
 
 export default function TrainingSession({ session, onFinish, onCancel, state }: TrainingSessionProps) {
   const [currentSession, setCurrentSession] = useState<Session>(session);
@@ -61,6 +79,14 @@ export default function TrainingSession({ session, onFinish, onCancel, state }: 
     
     if (isNowCompleted) {
       setTimerStart(Date.now());
+      // Sonido de victoria si es PR
+      if (isPR(newExs[exIdx].exerciseId, newExs[exIdx].sets[setIdx].weight, newExs[exIdx].sets[setIdx].reps)) {
+        playBeep(880, 0.1); 
+        setTimeout(() => playBeep(1108.73, 0.1), 100);
+        setTimeout(() => playBeep(1318.51, 0.2), 200);
+      } else {
+        playBeep(440, 0.05); // Sonido normal
+      }
     } else {
       setTimerStart(null);
     }
@@ -238,6 +264,10 @@ function ExerciseCard({ ex, exIdx, state, onAddSet, onToggleSet, onUpdateSet, is
             )}
           </div>
         </div>
+        <div className="flex items-center gap-1 text-[10px] text-brand-blue/60 font-bold uppercase tracking-widest bg-brand-blue/5 px-2 py-1 rounded-full border border-brand-blue/10">
+          <Sparkles size={10} />
+          Sugerencia IA
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -272,9 +302,14 @@ function ExerciseCard({ ex, exIdx, state, onAddSet, onToggleSet, onUpdateSet, is
                   onChange={(e) => onUpdateSet(sIdx, 'weight', parseFloat(e.target.value) || 0)}
                   className="w-full bg-slate-800 text-center rounded-lg py-2 outline-none font-bold text-slate-100 placeholder:text-slate-600 focus:ring-1 ring-brand-blue/30"
                 />
-                <div className="h-3 flex items-center justify-center">
+                <div className="h-3 flex items-center justify-center gap-1">
                   {set.weight > 0 && set.reps > 0 && (
                     <p className="text-[8px] text-slate-500 font-bold">1RM: {currentE1RM.toFixed(0)}</p>
+                  )}
+                  {bestE1RM > 0 && !set.completed && (
+                    <p className="text-[8px] text-brand-blue/60 font-black animate-pulse">
+                      • RECO: {suggestWeight(bestE1RM, set.reps || 10)}kg
+                    </p>
                   )}
                 </div>
               </div>

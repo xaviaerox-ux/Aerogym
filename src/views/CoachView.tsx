@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, Bot, User, Loader2, Sparkles, Dumbbell, Zap } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { AppState } from '../types';
 import { cn } from '../lib/utils';
 
@@ -69,30 +69,35 @@ export default function CoachView({ state }: CoachViewProps) {
     setIsTyping(true);
 
     try {
-      // Usamos el alias 'latest' para asegurar que usamos la versión más actual y disponible
-      const modelName = "gemini-flash-latest";
-      const model = genAI.getGenerativeModel({ model: modelName });
+      // Revertimos al ID que funcionaba originalmente
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-flash-latest",
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        ]
+      });
 
       // Preparamos el historial: 
-      // 1. Saltamos el mensaje de bienvenida inicial (índice 0)
-      // 2. No incluimos el mensaje que acabamos de enviar (ya que se envía en sendMessage)
       const chatHistory = messages.slice(1).map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
         parts: [{ text: m.content }]
       }));
 
-      // Iniciamos el chat
+      // Iniciamos el chat con el límite aumentado
       const chat = model.startChat({
         history: chatHistory,
         generationConfig: { 
-          maxOutputTokens: 500,
+          maxOutputTokens: 1024,
           temperature: 0.7,
         }
       });
 
-      // Contexto del sistema inyectado
-      const systemContext = `[CONTEXTO: Usuario ${state.profile.name}, Nivel ${state.profile.level}, Objetivo ${state.profile.goal}]`;
-      const prompt = `${systemContext}\n\nPregunta del usuario: ${userMsg}`;
+      // Inyectamos el contexto de Aero directamente en el prompt para asegurar compatibilidad
+      const richContext = generatePromptContext();
+      const prompt = `${richContext}\n\nPregunta del usuario: ${userMsg}`;
       
       const result = await chat.sendMessage(prompt);
       const response = await result.response;

@@ -1,18 +1,43 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Plus, Play, History, TrendingUp, Zap, CheckCircle } from 'lucide-react';
+import { Plus, Play, History, TrendingUp, Zap, CheckCircle, Apple, Quote, Sparkles } from 'lucide-react';
 import { AppState, Routine } from '../types';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
+import { calculateNutrition } from '../lib/engine';
+import { getNutritionalAdviceWithAI } from '../lib/aiService';
+import { ReadinessCard } from '../components/health/ReadinessCard';
+import { HealthImport } from '../components/health/HealthImport';
+import { ReadinessEngine } from '../lib/health/ReadinessEngine';
 
 interface DashboardProps {
   state: AppState;
   nextRoutine?: Routine;
   onStartSession: (routine?: Routine) => void;
+  onImportHealth: (data: { sleep: any[], activity: any[] }) => void;
 }
 
-export default function Dashboard({ state, nextRoutine, onStartSession }: DashboardProps) {
+export default function Dashboard({ state, nextRoutine, onStartSession, onImportHealth }: DashboardProps) {
   const lastSession = state.sessions[0];
+  const nutrition = calculateNutrition(state.profile);
+  
+  const [nutritionTip, setNutritionTip] = React.useState<string>("");
+  const [loadingTip, setLoadingTip] = React.useState(false);
+  const [isHealthImportOpen, setIsHealthImportOpen] = React.useState(false);
+
+  const readinessRecommendation = React.useMemo(() => {
+    const engine = new ReadinessEngine();
+    return engine.calculateScore(state.healthMetrics || []);
+  }, [state.healthMetrics]);
+
+  React.useEffect(() => {
+    if (!nutritionTip) {
+      setLoadingTip(true);
+      getNutritionalAdviceWithAI(state.profile, nutrition)
+        .then(setNutritionTip)
+        .finally(() => setLoadingTip(false));
+    }
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -21,6 +46,12 @@ export default function Dashboard({ state, nextRoutine, onStartSession }: Dashbo
         <h1 className="text-3xl font-bold text-slate-50">Bienvenido, {state.profile.name}</h1>
         <p className="text-slate-400 font-medium">Vamos a darle duro hoy.</p>
       </div>
+
+      {/* Readiness Score */}
+      <ReadinessCard 
+        recommendation={readinessRecommendation} 
+        onImportClick={() => setIsHealthImportOpen(true)} 
+      />
 
       {/* Suggested Action */}
       <section className="space-y-4">
@@ -59,6 +90,34 @@ export default function Dashboard({ state, nextRoutine, onStartSession }: Dashbo
         </button>
       </section>
 
+      {/* IA Nutrition Tip */}
+      {(nutritionTip || loadingTip) && (
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="glass p-5 rounded-3xl border-brand-blue/10 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Apple size={60} className="text-brand-blue" />
+            </div>
+            
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-full bg-brand-blue/20 flex items-center justify-center text-brand-blue">
+                <Sparkles size={16} />
+              </div>
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Consejo Nutricional</h3>
+            </div>
+
+            {loadingTip ? (
+              <div className="flex gap-2 items-center text-slate-500 text-sm animate-pulse italic">
+                Aero está preparando tu combustible...
+              </div>
+            ) : (
+              <p className="text-slate-300 leading-relaxed font-serif italic text-lg pr-8">
+                "{nutritionTip}"
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Recent Progress */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -96,6 +155,12 @@ export default function Dashboard({ state, nextRoutine, onStartSession }: Dashbo
           <StatCard label="Consistencia" value="85%" icon={<CheckCircle size={16} />} color="green" />
         </div>
       </section>
+
+      <HealthImport 
+        isOpen={isHealthImportOpen} 
+        onClose={() => setIsHealthImportOpen(false)} 
+        onImport={onImportHealth} 
+      />
     </div>
   );
 }

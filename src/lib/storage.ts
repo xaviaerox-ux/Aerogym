@@ -19,6 +19,7 @@ export const DEFAULT_STATE: AppState = {
   routines: [],
   customExercises: [],
   onboardingComplete: false,
+  healthMetrics: [],
   version: '1.0.0',
 };
 
@@ -38,6 +39,7 @@ export const loadState = (): AppState => {
       sessions: parsed.sessions || [],
       routines: parsed.routines || [],
       customExercises: parsed.customExercises || [],
+      healthMetrics: parsed.healthMetrics || [],
     };
   } catch (e) {
     console.error('Failed to load state', e);

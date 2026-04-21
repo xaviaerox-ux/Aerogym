@@ -1,6 +1,8 @@
 import React from 'react';
 import { AppState, Goal, Level, Experience, ActivityLevel, Gender } from '../types';
-import { User, Scale, Target, Trophy, Download, Upload, RotateCcw, Calendar, Utensils, Zap, Activity } from 'lucide-react';
+import { User, Scale, Target, Trophy, Download, Upload, RotateCcw, Calendar, Utensils, Zap, Activity, Sparkles, Loader2, X, ChefHat } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { analyzeProgressionWithAI, getNutritionalAdviceWithAI } from '../lib/aiService';
 import { cn } from '../lib/utils';
 import { calculateNutrition } from '../lib/engine';
 import { DEFAULT_STATE } from '../lib/storage';
@@ -54,8 +56,23 @@ export default function ProfileSettings({ state, updateState }: ProfileSettingsP
 
   const nutrition = calculateNutrition(state.profile);
 
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [mealIdea, setMealIdea] = React.useState<string | null>(null);
+
+  const generateMealIdea = async () => {
+    setIsGenerating(true);
+    try {
+      const advice = await getNutritionalAdviceWithAI(state.profile, nutrition);
+      setMealIdea(advice);
+    } catch (err) {
+      alert("Aero está meditando. Inténtalo más tarde.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-8 pb-32">
       <h1 className="text-3xl font-bold">Perfil</h1>
 
       {/* Stats Summary */}
@@ -92,8 +109,52 @@ export default function ProfileSettings({ state, updateState }: ProfileSettingsP
               "Distribución de 2g de proteína por kg de peso para maximizar {state.profile.goal.toLowerCase()} y preservar masa muscular, siguiendo evidencia científica."
             </p>
           </div>
+
+          <button 
+            onClick={generateMealIdea}
+            disabled={isGenerating}
+            className="w-full py-4 bg-brand-blue/10 border border-brand-blue/30 rounded-2xl flex items-center justify-center gap-2 text-brand-blue font-bold text-sm hover:bg-brand-blue hover:text-slate-950 transition-all"
+          >
+            {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <ChefHat size={18} />}
+            Sugerencias de Aero (IA)
+          </button>
         </div>
       </section>
+
+      <AnimatePresence>
+        {mealIdea && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="glass p-8 rounded-3xl max-w-md w-full relative space-y-4"
+            >
+              <button 
+                onClick={() => setMealIdea(null)}
+                className="absolute top-4 right-4 text-slate-500"
+              >
+                <X size={24} />
+              </button>
+              
+              <div className="w-12 h-12 bg-brand-blue/20 rounded-full flex items-center justify-center text-brand-blue mb-2">
+                <Sparkles size={24} />
+              </div>
+              
+              <h2 className="text-2xl font-bold">Combustible para la Virtud</h2>
+              <p className="text-slate-300 italic font-serif text-lg leading-relaxed">
+                "{mealIdea}"
+              </p>
+              
+              <button 
+                onClick={() => setMealIdea(null)}
+                className="w-full py-4 bg-brand-blue text-slate-950 rounded-xl font-black mt-4"
+              >
+                ENTENDIDO
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Settings Sections */}
       <section className="space-y-4">
