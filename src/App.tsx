@@ -14,7 +14,7 @@ import {
   ChevronLeft,
   Sparkles
 } from 'lucide-react';
-import { AppState, Session, Routine, UserProfile } from './types';
+import { AppState, Session, Routine, UserProfile, DailyHealthMetric } from './types';
 import { loadState, saveState } from './lib/storage';
 import { cn } from './lib/utils';
 import Dashboard from './views/Dashboard';
@@ -99,19 +99,22 @@ export default function App() {
   };
 
   const nextSuggestedRoutine = useMemo(() => {
+    // Si no hay rutinas definidas en el estado, usamos la primera del catálogo global
     if (!state.routines || state.routines.length === 0) return PREDEFINED_ROUTINES[0];
     
     const lastSession = state.sessions[0];
     if (!lastSession) return state.routines[0];
 
-    // Try to find the routine index that matches the last session name
+    // Buscamos el índice de la rutina que se hizo por última vez
     const lastRoutineIndex = state.routines.findIndex(r => r.name === lastSession.name);
     
-    if (lastRoutineIndex === -1) return state.routines[0];
+    // Si no la encontramos o es la última, volvemos a la primera de la lista del usuario
+    if (lastRoutineIndex === -1 || lastRoutineIndex === state.routines.length - 1) {
+      return state.routines[0];
+    }
     
-    // Cycle to next
-    const nextIndex = (lastRoutineIndex + 1) % state.routines.length;
-    return state.routines[nextIndex];
+    // De lo contrario, sugerimos la siguiente en su lista personal
+    return state.routines[lastRoutineIndex + 1];
   }, [state.sessions, state.routines]);
 
   const handleGenerateAIRoutine = async () => {
@@ -128,23 +131,22 @@ export default function App() {
     }
   };
 
-  const handleImportHealth = (data: { sleep: any[], activity: any[] }) => {
+  const handleImportHealth = (newMetrics: DailyHealthMetric[]) => {
     updateState(prev => {
       const metricsMap = new Map();
       
       // Existing metrics
-      prev.healthMetrics.forEach(m => metricsMap.set(m.date, m));
+      prev.healthMetrics.forEach(m => metricsMap.set(m.date, { ...m }));
 
-      // Merge Activity
-      data.activity.forEach(a => {
-        const existing = metricsMap.get(a.date) || { date: a.date };
-        metricsMap.set(a.date, { ...existing, steps: a.steps });
-      });
-
-      // Merge Sleep
-      data.sleep.forEach(s => {
-        const existing = metricsMap.get(s.date) || { date: s.date };
-        metricsMap.set(s.date, { ...existing, sleep: s });
+      // Merge new metrics
+      newMetrics.forEach(nm => {
+        const existing = metricsMap.get(nm.date) || { date: nm.date };
+        metricsMap.set(nm.date, { 
+          ...existing, 
+          ...nm,
+          // Special merge for sleep if both have it
+          sleep: nm.sleep || existing.sleep 
+        });
       });
 
       return {
@@ -152,6 +154,29 @@ export default function App() {
         healthMetrics: Array.from(metricsMap.values()).sort((a, b) => a.date.localeCompare(b.date))
       };
     });
+  };
+
+  const updateDailyActivity = (steps: number, cardioMin: number) => {
+    updateState(prev => {
+      const today = new Date().toISOString().split('T')[0];
+      const metrics = [...prev.healthMetrics];
+      const index = metrics.findIndex(m => m.date === today);
+      
+      const newMetric = { 
+        date: today, 
+        steps: steps || (index >= 0 ? metrics[index].steps : 0),
+        cardioMin: cardioMin || (index >= 0 ? metrics[index].cardioMin : 0)
+      };
+
+      if (index >= 0) {
+        metrics[index] = { ...metrics[index], ...newMetric };
+      } else {
+        metrics.push(newMetric);
+      }
+
+      return { ...prev, healthMetrics: metrics };
+    });
+    alert('Actividad guardada correctamente');
   };
 
   const renderContent = () => {
@@ -168,7 +193,7 @@ export default function App() {
 
     switch (activeTab) {
       case 'onboarding': return <OnboardingView state={state} updateState={updateState} onComplete={() => setActiveTab('home')} />;
-      case 'home': return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} onImportHealth={handleImportHealth} />;
+      case 'home': return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} onUpdateActivity={updateDailyActivity} />;
       case 'workouts': return (
         <RoutinesList 
           state={state} 
@@ -179,8 +204,8 @@ export default function App() {
       );
       case 'analytics': return <Analytics state={state} />;
       case 'coach': return <CoachView state={state} />;
-      case 'profile': return <ProfileSettings state={state} updateState={updateState} />;
-      default: return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} onImportHealth={handleImportHealth} />;
+      case 'profile': return <ProfileSettings state={state} updateState={updateState} onImportHealth={handleImportHealth} />;
+      default: return <Dashboard state={state} nextRoutine={nextSuggestedRoutine} onStartSession={startSession} onUpdateActivity={updateDailyActivity} />;
     }
   };
 

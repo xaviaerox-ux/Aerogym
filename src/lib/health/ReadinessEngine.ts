@@ -1,4 +1,4 @@
-import { DailyHealthMetric, WorkoutRecommendation, ZeppSleepEntry } from '../../types/health';
+import { DailyHealthMetric, WorkoutRecommendation, HealthSleepEntry } from '../../types/health';
 
 const STOIC_PHRASES = {
   rest: "\"A veces, incluso el vivir es un acto de coraje.\" — Séneca. Hoy tu coraje es el descanso.",
@@ -23,8 +23,8 @@ export class ReadinessEngine {
     return this.getRecommendation(total);
   }
 
-  private calculateSleepScore(sleep?: ZeppSleepEntry): number {
-    if (!sleep) return 15; // Score base neutral
+  private calculateSleepScore(sleep?: HealthSleepEntry): number {
+    if (!sleep || sleep.totalSleepMin === 0) return 15; // Score base neutral
 
     const durationHrs = sleep.totalSleepMin / 60;
     const targetHrs = 7.5;
@@ -37,7 +37,8 @@ export class ReadinessEngine {
     const qualityPts = Math.min(15, (qualityRatio / 0.4) * 15); // 40% de calidad es óptimo
 
     // Eficiencia (vs despierto) (0-10 pts)
-    const efficiency = sleep.totalSleepMin / (sleep.totalSleepMin + sleep.awakeSleepMin);
+    const totalBedTime = sleep.totalSleepMin + sleep.awakeSleepMin;
+    const efficiency = totalBedTime > 0 ? sleep.totalSleepMin / totalBedTime : 0;
     const efficiencyPts = Math.min(10, (efficiency / 0.9) * 10);
 
     return durationPts + qualityPts + efficiencyPts;

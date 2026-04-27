@@ -6,13 +6,17 @@ import { analyzeProgressionWithAI, getNutritionalAdviceWithAI } from '../lib/aiS
 import { cn } from '../lib/utils';
 import { calculateNutrition } from '../lib/engine';
 import { DEFAULT_STATE } from '../lib/storage';
+import { HealthImport } from '../components/health/HealthImport';
+import { DailyHealthMetric } from '../types/health';
 
 interface ProfileSettingsProps {
   state: AppState;
   updateState: (updater: (prev: AppState) => AppState) => void;
+  onImportHealth: (newMetrics: DailyHealthMetric[]) => void;
 }
 
-export default function ProfileSettings({ state, updateState }: ProfileSettingsProps) {
+export default function ProfileSettings({ state, updateState, onImportHealth }: ProfileSettingsProps) {
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
   
   const updateProfile = (field: keyof typeof state.profile, val: any) => {
     updateState(prev => ({
@@ -305,6 +309,30 @@ export default function ProfileSettings({ state, updateState }: ProfileSettingsP
           </div>
         </div>
       </section>
+
+      {/* Health Import Section */}
+      <section className="space-y-4">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-widest px-2">
+          <Activity size={14} /> Sincronización de Salud
+        </h3>
+        <div className="glass p-6 rounded-3xl space-y-4">
+          <p className="text-xs text-slate-400 leading-relaxed italic">
+            Conecta tus datos de Xiaomi o Google Fit. Los nuevos datos se fusionarán automáticamente con tu historial.
+          </p>
+          <button 
+            onClick={() => setIsImportOpen(true)}
+            className="w-full py-4 bg-brand-blue text-slate-950 rounded-2xl flex items-center justify-center gap-2 font-black text-sm hover:scale-[1.02] transition-transform"
+          >
+            <Upload size={18} /> Importar Datos de Salud
+          </button>
+        </div>
+      </section>
+
+      <HealthImport 
+        isOpen={isImportOpen} 
+        onClose={() => setIsImportOpen(false)} 
+        onImport={onImportHealth} 
+      />
 
       {/* Backup & Safety */}
       <section className="space-y-4">

@@ -1,17 +1,19 @@
 import React from 'react';
 import { X, Upload, Info, FileArchive, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ZeppImporter } from '../../lib/health/ZeppImporter';
+import { HealthImporterFactory } from '../../lib/health/HealthImporterFactory';
+import { DailyHealthMetric } from '../../types/health';
 
 interface HealthImportProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (data: { sleep: any[], activity: any[] }) => void;
+  onImport: (metrics: DailyHealthMetric[]) => void;
 }
 
 export function HealthImport({ isOpen, onClose, onImport }: HealthImportProps) {
   const [loading, setLoading] = React.useState(false);
   const [status, setStatus] = React.useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -19,24 +21,34 @@ export function HealthImport({ isOpen, onClose, onImport }: HealthImportProps) {
 
     setLoading(true);
     setStatus('idle');
+    setErrorMsg(null);
 
     try {
-      const importer = new ZeppImporter();
-      const data = await importer.importFromZip(file);
+      let metrics: DailyHealthMetric[] = [];
       
-      if (data.sleep.length === 0 && data.activity.length === 0) {
-        throw new Error('No se encontraron datos compatibles');
+      if (file.name.endsWith('.zip')) {
+        metrics = await HealthImporterFactory.import(file);
+      } else if (file.name.endsWith('.csv') || file.name.endsWith('.json')) {
+        // Procesar archivo individual
+        metrics = await HealthImporterFactory.importSingleFile(file);
+      } else {
+        throw new Error('Formato no soportado. Usa .zip, .csv o .json');
+      }
+      
+      if (metrics.length === 0) {
+        throw new Error('No se encontraron datos compatibles en el archivo');
       }
 
-      onImport(data);
+      onImport(metrics);
       setStatus('success');
       setTimeout(() => {
         onClose();
         setStatus('idle');
       }, 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setStatus('error');
+      setErrorMsg(err.message || 'Error desconocido');
     } finally {
       setLoading(false);
     }
@@ -63,9 +75,9 @@ export function HealthImport({ isOpen, onClose, onImport }: HealthImportProps) {
               <div className="w-16 h-16 bg-brand-blue/20 rounded-2xl flex items-center justify-center text-brand-blue mx-auto">
                 <FileArchive size={32} />
               </div>
-              <h2 className="text-2xl font-black text-slate-50 tracking-tight">Importar datos de Zepp</h2>
+              <h2 className="text-2xl font-black text-slate-50 tracking-tight">Sincronizar Salud</h2>
               <p className="text-sm text-slate-400">
-                Sube el archivo <code className="text-brand-blue">.zip</code> que exportaste desde la app Zepp Life.
+                Sube el archivo <code className="text-brand-blue">.zip</code>, <code className="text-brand-blue">.csv</code> o <code className="text-brand-blue">.json</code>.
               </p>
             </div>
 
@@ -74,8 +86,11 @@ export function HealthImport({ isOpen, onClose, onImport }: HealthImportProps) {
                 <div className="flex items-start gap-3">
                   <Info size={16} className="text-brand-blue shrink-0 mt-0.5" />
                   <div className="text-xs text-slate-400 leading-relaxed">
-                    <p className="font-bold text-slate-300 mb-1">Cómo conseguir el archivo:</p>
-                    Zepp Life {'->'} Perfil {'->'} Ajustes {'->'} Acerca de {'->'} Ejercicio de derechos {'->'} Exportar datos.
+                    <p className="font-bold text-slate-300 mb-1">Fuentes compatibles:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li><span className="text-brand-blue">ZIP</span>: Google Takeout / Zepp</li>
+                      <li><span className="text-brand-blue">Archivos sueltos</span>: .csv / .json</li>
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -89,7 +104,7 @@ export function HealthImport({ isOpen, onClose, onImport }: HealthImportProps) {
                 <label className="relative group block cursor-pointer">
                   <input 
                     type="file" 
-                    accept=".zip" 
+                    accept=".zip,.csv,.json" 
                     onChange={handleFileChange}
                     className="hidden"
                     disabled={loading}
@@ -109,8 +124,8 @@ export function HealthImport({ isOpen, onClose, onImport }: HealthImportProps) {
                     </span>
                   </div>
                   {status === 'error' && (
-                    <p className="text-center text-xs text-red-400 mt-2 font-bold animate-pulse">
-                      Error al procesar. Verifica el archivo.
+                    <p className="text-center text-xs text-red-400 mt-2 font-bold animate-pulse px-4">
+                      {errorMsg || 'Error al procesar. Verifica el archivo.'}
                     </p>
                   )}
                 </label>

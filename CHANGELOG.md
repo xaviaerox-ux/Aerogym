@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-04-27]
+
+### Added
+- **Integración Universal de Salud**: Soporte completo para **Google Takeout (Google Fit)** unificado con el sistema de Xiaomi.
+- **Visualización de Métricas de Salud**: Nuevas gráficas de "Tendencias de Salud" en el apartado de Analytics (Pasos y Horas de Sueño).
+- **Sabiduría de Aero Holística**: El coach de IA ahora cruza datos de entrenamiento con métricas de salud (descanso, pasos) para dar consejos más precisos.
+- **Restructuración de Espacio de Trabajo**: Implementación de `local_data/` y protección estricta de privacidad en `.gitignore`.
+- **Clean Architecture (Salud)**: Refactorización de la lógica de salud en módulos desacoplados (`importers`, `factory`, `engine`).
+
+### Fixed
+- **Seguridad**: Eliminación de datos personales del árbol de archivos principal para prevenir fugas en GitHub.
+- **Gobernanza**: Organización de archivos temporales y scripts de análisis en directorios ignorados.
+
 ## [Unreleased]
 
 ### Fixed

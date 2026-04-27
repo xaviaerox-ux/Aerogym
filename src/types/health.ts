@@ -1,4 +1,4 @@
-export interface ZeppSleepEntry {
+export interface HealthSleepEntry {
   date: string;
   bedtime: string;
   wakeup: string;
@@ -9,7 +9,7 @@ export interface ZeppSleepEntry {
   totalSleepMin: number;
 }
 
-export interface ZeppActivityEntry {
+export interface HealthActivityEntry {
   date: string;
   steps: number;
   distance: number;
@@ -19,7 +19,10 @@ export interface ZeppActivityEntry {
 export interface DailyHealthMetric {
   date: string;
   steps?: number;
-  sleep?: ZeppSleepEntry;
+  weight?: number;
+  calories?: number;
+  cardioMin?: number;
+  sleep?: HealthSleepEntry;
 }
 
 export interface WorkoutRecommendation {

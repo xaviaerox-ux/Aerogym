@@ -5,9 +5,10 @@ import { WorkoutRecommendation } from '../../types/health';
 interface ReadinessCardProps {
   recommendation: WorkoutRecommendation;
   onImportClick: () => void;
+  hideImportBtn?: boolean;
 }
 
-export function ReadinessCard({ recommendation, onImportClick }: ReadinessCardProps) {
+export function ReadinessCard({ recommendation, onImportClick, hideImportBtn }: ReadinessCardProps) {
   const { score, label, color, description, exercises, avoid, aeroMessage } = recommendation;
 
   return (
@@ -31,12 +32,14 @@ export function ReadinessCard({ recommendation, onImportClick }: ReadinessCardPr
             <p className="text-sm font-bold text-slate-200">{label}</p>
           </div>
           
-          <button 
-            onClick={onImportClick}
-            className="text-[10px] font-black text-brand-blue uppercase tracking-widest bg-brand-blue/10 px-3 py-1.5 rounded-full border border-brand-blue/20 hover:bg-brand-blue hover:text-slate-950 transition-all"
-          >
-            Sincronizar Zepp
-          </button>
+          {!hideImportBtn && (
+            <button 
+              onClick={onImportClick}
+              className="text-[10px] font-black text-brand-blue uppercase tracking-widest bg-brand-blue/10 px-3 py-1.5 rounded-full border border-brand-blue/20 hover:bg-brand-blue hover:text-slate-950 transition-all"
+            >
+              Sincronizar Salud
+            </button>
+          )}
         </div>
 
         <p className="text-slate-400 text-sm leading-relaxed mb-6">

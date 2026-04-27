@@ -1,4 +1,4 @@
-import { DailyHealthMetric } from './health';
+export { DailyHealthMetric } from './health';
 
 export type MuscleGroup = 
   | 'Pecho' | 'Espalda' | 'Hombros' | 'Cuádriceps' | 'Isquios' | 'Glúteos' | 'Gemelos' 

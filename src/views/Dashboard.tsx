@@ -1,59 +1,54 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Plus, Play, History, TrendingUp, Zap, CheckCircle, Apple, Quote, Sparkles } from 'lucide-react';
+import { Plus, Play, History, Zap, Sparkles, Activity, Footprints, Flame } from 'lucide-react';
 import { AppState, Routine } from '../types';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { cn } from '../lib/utils';
-import { calculateNutrition } from '../lib/engine';
-import { getNutritionalAdviceWithAI } from '../lib/aiService';
 import { ReadinessCard } from '../components/health/ReadinessCard';
-import { HealthImport } from '../components/health/HealthImport';
 import { ReadinessEngine } from '../lib/health/ReadinessEngine';
 
 interface DashboardProps {
   state: AppState;
   nextRoutine?: Routine;
   onStartSession: (routine?: Routine) => void;
-  onImportHealth: (data: { sleep: any[], activity: any[] }) => void;
+  onUpdateActivity: (steps: number, cardioMin: number) => void;
 }
 
-export default function Dashboard({ state, nextRoutine, onStartSession, onImportHealth }: DashboardProps) {
+export default function Dashboard({ state, nextRoutine, onStartSession, onUpdateActivity }: DashboardProps) {
   const lastSession = state.sessions[0];
-  const nutrition = calculateNutrition(state.profile);
   
-  const [nutritionTip, setNutritionTip] = React.useState<string>("");
-  const [loadingTip, setLoadingTip] = React.useState(false);
-  const [isHealthImportOpen, setIsHealthImportOpen] = React.useState(false);
-
   const readinessRecommendation = React.useMemo(() => {
     const engine = new ReadinessEngine();
     return engine.calculateScore(state.healthMetrics || []);
   }, [state.healthMetrics]);
 
-  React.useEffect(() => {
-    if (!nutritionTip) {
-      setLoadingTip(true);
-      getNutritionalAdviceWithAI(state.profile, nutrition)
-        .then(setNutritionTip)
-        .finally(() => setLoadingTip(false));
-    }
-  }, []);
+  // Lógica para registro rápido de pasos/cardio
+  const [steps, setSteps] = React.useState('');
+  const [cardio, setCardio] = React.useState('');
+
+  const handleQuickLog = () => {
+    onUpdateActivity(parseInt(steps) || 0, parseInt(cardio) || 0);
+    setSteps('');
+    setCardio('');
+  };
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Header Minimalista */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-50">Bienvenido, {state.profile.name}</h1>
-        <p className="text-slate-400 font-medium">Vamos a darle duro hoy.</p>
+        <h1 className="text-3xl font-bold text-slate-50">Hola, {state.profile.name}</h1>
+        <p className="text-slate-400 font-medium">Foco y disciplina para hoy.</p>
       </div>
 
-      {/* Readiness Score */}
+      {/* Readiness Score (Sin botón de importar aquí) */}
       <ReadinessCard 
         recommendation={readinessRecommendation} 
-        onImportClick={() => setIsHealthImportOpen(true)} 
+        onImportClick={() => {}} // Deshabilitado en Dashboard
+        hideImportBtn={true}
       />
 
-      {/* Suggested Action */}
+      {/* Siguiente Sesión (Rotación Automática PPL) */}
       <section className="space-y-4">
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] px-1">Siguiente Sesión</h2>
         <motion.button
@@ -67,11 +62,11 @@ export default function Dashboard({ state, nextRoutine, onStartSession, onImport
             <div className="space-y-2">
               <h3 className="text-2xl font-black text-slate-50">{nextRoutine?.name || 'Entrenar'}</h3>
               <p className="text-slate-400 font-medium text-sm line-clamp-1 max-w-[200px]">
-                {nextRoutine?.description || 'Basado en tu plan personalizado'}
+                {nextRoutine?.description || 'Basado en tu rotación actual'}
               </p>
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-[10px] bg-brand-blue text-slate-950 px-2 py-0.5 rounded font-black uppercase">RECOMENDADO</span>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{nextRoutine?.exercises.length} Ejercicios</span>
+                <span className="text-[10px] bg-brand-blue text-slate-950 px-2 py-0.5 rounded font-black uppercase tracking-tighter">TURNO ACTUAL</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{(nextRoutine?.exercises?.length || 0)} Ejercicios</span>
               </div>
             </div>
             
@@ -80,99 +75,82 @@ export default function Dashboard({ state, nextRoutine, onStartSession, onImport
             </div>
           </div>
         </motion.button>
+      </section>
 
+      {/* Registro Rápido (Cardio/Pasos) */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] px-1">Actividad Diaria</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="glass p-4 rounded-2xl flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-brand-blue">
+              <Footprints size={16} />
+              <span className="text-[10px] font-bold uppercase">Pasos</span>
+            </div>
+            <input 
+              type="number" 
+              value={steps}
+              onChange={(e) => setSteps(e.target.value)}
+              placeholder="Ej: 10000"
+              className="bg-transparent text-xl font-bold outline-none text-slate-50 w-full"
+            />
+          </div>
+          <div className="glass p-4 rounded-2xl flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-orange-400">
+              <Flame size={16} />
+              <span className="text-[10px] font-bold uppercase">Cardio (min)</span>
+            </div>
+            <input 
+              type="number" 
+              value={cardio}
+              onChange={(e) => setCardio(e.target.value)}
+              placeholder="Ej: 30"
+              className="bg-transparent text-xl font-bold outline-none text-slate-50 w-full"
+            />
+          </div>
+        </div>
         <button 
-          onClick={() => onStartSession()}
-          className="w-full py-4 glass border-white/5 rounded-2xl text-slate-400 text-sm font-bold uppercase tracking-widest hover:text-slate-200 transition-colors flex items-center justify-center gap-2"
+           onClick={handleQuickLog}
+           className="w-full py-3 glass border-white/5 rounded-xl text-brand-blue text-[10px] font-black uppercase tracking-widest hover:bg-brand-blue/5 transition-colors"
         >
-          <Plus size={16} />
-          Entrenamiento Rápido / Variación
+          Guardar Actividad Extra
         </button>
       </section>
 
-      {/* IA Nutrition Tip */}
-      {(nutritionTip || loadingTip) && (
-        <section className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          <div className="glass p-5 rounded-3xl border-brand-blue/10 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Apple size={60} className="text-brand-blue" />
-            </div>
-            
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-full bg-brand-blue/20 flex items-center justify-center text-brand-blue">
-                <Sparkles size={16} />
-              </div>
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Consejo Nutricional</h3>
-            </div>
-
-            {loadingTip ? (
-              <div className="flex gap-2 items-center text-slate-500 text-sm animate-pulse italic">
-                Aero está preparando tu combustible...
-              </div>
-            ) : (
-              <p className="text-slate-300 leading-relaxed font-serif italic text-lg pr-8">
-                "{nutritionTip}"
-              </p>
-            )}
+      {/* Sabiduría Aero (Un solo consejo potente) */}
+      <section className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="glass p-6 rounded-3xl border-brand-blue/10 relative overflow-hidden group">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={16} className="text-brand-blue" />
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Sabiduría de Aero</h3>
           </div>
-        </section>
-      )}
-
-      {/* Recent Progress */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <History size={20} className="text-brand-blue" />
-          Actividad Reciente
-        </h2>
-        {state.sessions.length > 0 ? (
-          <div className="glass p-4 rounded-xl space-y-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-semibold text-slate-50">{lastSession.name}</p>
-                <p className="text-xs text-slate-400 font-medium">{format(new Date(lastSession.date), 'EEEE, d MMM')}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-brand-green font-bold text-sm">+{lastSession.totalVolume}kg</p>
-                <p className="text-[10px] uppercase text-slate-400 tracking-widest font-bold">Progreso</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="glass p-8 rounded-xl text-center text-slate-400 italic font-medium">
-            Aún no hay registros. ¡Empieza tu primera sesión!
-          </div>
-        )}
-      </section>
-
-      {/* Muscle Focus (Visual Idea) */}
-      <section className="space-y-4 pb-10">
-         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Zap size={20} className="text-yellow-400" />
-          Estadísticas Semanales
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard label="Progreso Objetivo" value="12%" icon={<TrendingUp size={16} />} color="blue" />
-          <StatCard label="Consistencia" value="85%" icon={<CheckCircle size={16} />} color="green" />
+          <p className="text-slate-300 leading-relaxed font-serif italic text-lg">
+            "La disciplina es el puente entre las metas y los logros. Hoy no es el día para cruzarlo a medias."
+          </p>
         </div>
       </section>
 
-      <HealthImport 
-        isOpen={isHealthImportOpen} 
-        onClose={() => setIsHealthImportOpen(false)} 
-        onImport={onImportHealth} 
-      />
-    </div>
-  );
-}
-
-function StatCard({ label, value, icon, color }: { label: string, value: string, icon: React.ReactNode, color: 'blue' | 'green' }) {
-  return (
-    <div className="glass p-4 rounded-xl">
-      <div className={cn("mb-2", color === 'blue' ? "text-brand-blue" : "text-brand-green")}>
-        {icon}
-      </div>
-      <p className="text-2xl font-bold text-slate-50">{value}</p>
-      <p className="text-xs text-slate-400 uppercase tracking-wider font-bold">{label}</p>
+      {/* Actividad Reciente (Solo el último) */}
+      <section className="space-y-4 pb-10">
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] px-1">Último Registro</h2>
+        {state.sessions.length > 0 ? (
+          <div className="glass p-5 rounded-2xl flex justify-between items-center border border-white/5">
+            <div>
+              <p className="font-bold text-slate-50">{lastSession.name}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                {format(new Date(lastSession.date), 'EEEE, d MMM', { locale: es })}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-brand-green font-black text-lg">+{lastSession.totalVolume}kg</p>
+              <Activity size={14} className="text-brand-green ml-auto mt-1" />
+            </div>
+          </div>
+        ) : (
+          <div className="glass p-8 rounded-2xl text-center text-slate-500 italic text-sm">
+            Ninguna sesión grabada aún.
+          </div>
+        )}
+      </section>
     </div>
   );
 }

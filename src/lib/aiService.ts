@@ -66,14 +66,14 @@ export const generateRoutineWithAI = async (profile: UserProfile): Promise<Routi
   }
 };
 
-export const analyzeProgressionWithAI = async (sessions: any[], profile: UserProfile): Promise<string> => {
+export const analyzeProgressionWithAI = async (sessions: any[], profile: UserProfile, healthMetrics?: DailyHealthMetric[]): Promise<string> => {
   if (!genAI) throw new Error("API Key no configurada");
 
   const model = genAI.getGenerativeModel({ 
     model: "gemini-flash-latest" 
   });
 
-  // Resumir sesiones para no saturar el prompt
+  // Resumir sesiones
   const sessionsSummary = sessions.slice(0, 5).map(s => ({
     date: s.date,
     volume: s.totalVolume,
@@ -83,12 +83,22 @@ export const analyzeProgressionWithAI = async (sessions: any[], profile: UserPro
     }))
   }));
 
+  // Resumir salud (últimos 3 días)
+  const healthSummary = healthMetrics?.slice(-3).map(m => ({
+    date: m.date,
+    steps: m.steps,
+    sleepHrs: m.sleep ? (m.sleep.totalSleepMin / 60).toFixed(1) : 'N/A'
+  }));
+
   const prompt = `
     Eres Aero, el coach estoico de AeroGym. 
     Tu misión es analizar el progreso de ${profile.name} y dar un consejo corto, motivador y basado en la filosofía estoica.
     
     HISTORIAL RECIENTE:
     ${JSON.stringify(sessionsSummary)}
+
+    DATOS DE SALUD (SUEÑO Y PASOS):
+    ${JSON.stringify(healthSummary || 'No disponibles')}
 
     CONTEXTO:
     - Nivel: ${profile.level}
@@ -97,8 +107,8 @@ export const analyzeProgressionWithAI = async (sessions: any[], profile: UserPro
     INSTRUCCIONES:
     1. Mantente fiel a la filosofía estoica (Séneca, Marco Aurelio, Epicteto).
     2. Sé breve (máximo 3 frases).
-    3. Si el volumen sube, felicita con sobriedad.
-    4. Si hay estancamiento, motiva a la disciplina y a controlar lo que está en su mano (esfuerzo, no resultado).
+    3. Cruza los datos: si el volumen baja pero el sueño ha sido malo, menciona que el descanso es parte de la disciplina.
+    4. Si los pasos son muy altos y el volumen baja, menciona la fatiga sistémica.
     5. No uses formatos markdown exagerados.
   `;
 

@@ -79,4 +79,23 @@ export const PREDEFINED_ROUTINES: Routine[] = [
       { exerciseId: 'calf-raises', defaultSets: 3, defaultReps: '12-15', defaultWeight: 50 },
     ]
   },
+  // Templates de reserva para el onboarding
+  {
+    id: 'upper-b',
+    name: 'Torso B',
+    description: 'Enfoque en accesorios de torso.',
+    exercises: [
+      { exerciseId: 'bench-press', defaultSets: 3, defaultReps: '10-12', defaultWeight: 45 },
+      { exerciseId: 'lat-pulldown', defaultSets: 3, defaultReps: '10-12', defaultWeight: 60 }
+    ]
+  },
+  {
+    id: 'full-body-metabolic',
+    name: 'Cuerpo Completo Metabólico',
+    description: 'Enfoque en quema de calorías.',
+    exercises: [
+      { exerciseId: 'squats', defaultSets: 3, defaultReps: '15', defaultWeight: 30 },
+      { exerciseId: 'bench-press', defaultSets: 3, defaultReps: '15', defaultWeight: 30 }
+    ]
+  }
 ];
